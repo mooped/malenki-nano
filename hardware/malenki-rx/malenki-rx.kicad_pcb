@@ -13255,13 +13255,13 @@
 	(footprint "new-moop-items:Crab"
 		(layer "B.Cu")
 		(uuid "28e58e87-05cb-4b33-9fd4-4aba559d3785")
-		(at 100 69.5 90)
+		(at 101.75 68.5 90)
 		(property "Reference" "REF**"
 			(at 0 0.5 270)
 			(unlocked yes)
 			(layer "B.SilkS")
 			(hide yes)
-			(uuid "39f7c524-8645-4736-98dd-115f674c439a")
+			(uuid "005accc3-2baf-4ebb-be53-93dd7e918fd6")
 			(effects
 				(font
 					(size 1 1)
@@ -13275,7 +13275,7 @@
 			(unlocked yes)
 			(layer "B.Fab")
 			(hide yes)
-			(uuid "1879b48f-4e08-436e-9eb0-af85552176e8")
+			(uuid "84759a90-9715-42a6-8b8d-d07bdd6dbb49")
 			(effects
 				(font
 					(size 1 1)
@@ -13289,7 +13289,7 @@
 			(unlocked yes)
 			(layer "B.Fab")
 			(hide yes)
-			(uuid "925a160a-ff7d-40da-b6b6-0b36c7192828")
+			(uuid "933b45c1-38f8-4d58-af02-9d1fb731b33c")
 			(effects
 				(font
 					(size 1 1)
@@ -13303,7 +13303,7 @@
 			(unlocked yes)
 			(layer "B.Fab")
 			(hide yes)
-			(uuid "968f1d12-26ba-47ca-8911-1cd9faa6a2c5")
+			(uuid "921ccbf8-1785-4bfa-bff4-08de7079785e")
 			(effects
 				(font
 					(size 1 1)
@@ -13324,7 +13324,7 @@
 			(uuid "081c4771-dc0f-4335-8826-e6e9530bf657")
 		)
 		(fp_line
-			(start 1.875 -1.254)
+			(start 1.875 -0.77)
 			(end 1.875 -0.254)
 			(stroke
 				(width 0.12)
@@ -13334,7 +13334,7 @@
 			(uuid "472c892c-1796-4cd6-9ed6-86f39509697b")
 		)
 		(fp_line
-			(start -1.875 -1.254)
+			(start -1.875 -0.77)
 			(end -1.875 -0.254)
 			(stroke
 				(width 0.12)
