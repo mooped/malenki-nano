@@ -25,7 +25,7 @@ HEX=$(OBJDIR)/main.hex
 
 LTOFLAGS=-flto
 # -flto is link-time optimisation and must be used for compile and link.
-LINKFLAGS=-g -Os $(LTOFLAGS)
+LINKFLAGS=-g -Os -B/usr/local/avr/avr/lib/avrxmega3 $(LTOFLAGS)
 
 link: $(OBJECTS) $(HEADERS)
 	avr-gcc -mmcu=$(MCU) -o $(ELF) $(OBJECTS) $(LINKFLAGS)
@@ -39,6 +39,7 @@ link: $(OBJECTS) $(HEADERS)
 	avr-objcopy -j .text -j .data -j .rodata -O binary $(ELF) $(OBJDIR)/main.bin
 
 CFLAGS += -mmcu=$(MCU) -Os -Wall -g  $(LTOFLAGS)
+CFLAGS += -I/usr/local/avr/avr/include
 $(OBJDIR)/%.o: %.c $(MAKEFILES) $(HEADERS)
 	@mkdir -p $(OBJDIR)
 	avr-gcc -c $(CFLAGS) -o $@ $<
