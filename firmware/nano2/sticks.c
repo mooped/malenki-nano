@@ -5,6 +5,9 @@
 
 #include "mixing.h"
 #include "motors.h"
+#if PRODUCT_IS_RX
+#include "motors_pwm.h"
+#endif
 #include "weapons.h"
 #include "state.h"
 #include "diag.h"
@@ -194,6 +197,9 @@ sticks_result_t sticks_receive_positions(uint16_t *sticks)
         result.led_state = handle_configuration_mode(sticks);
         result.rpm_value = config_rpm_value;
     } else {
+#ifdef PRODUCT_IS_RX
+        set_pwm_outputs(sticks);
+#else
         // Centre is *always* 1500.
         // Convert to signed.
         int16_t rel_steering = (int16_t) sticks[CHANNEL_INDEX_STEERING] - 1500;
@@ -204,6 +210,7 @@ sticks_result_t sticks_receive_positions(uint16_t *sticks)
         mixing_drive_motors(rel_throttle, rel_steering, rel_weapon, invert);
         // Activate extra weapon channels
         weapons_set(sticks[CHANNEL_INDEX_WEAPON2], sticks[CHANNEL_INDEX_WEAPON3]);
+#endif
     }
 
     has_signal = true;

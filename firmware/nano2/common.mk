@@ -9,14 +9,18 @@ OBJ_FILES=main.o diag.o a7105_spi.o spi_asm.o radio.o nvconfig.o mixing.o weapon
 # Use a different motors source for different products which need
 # different logic.
 ifeq ($(PRODUCT_MODEL),scarab)
- OBJ_FILES += motors_scarab.o
+	OBJ_FILES += motors_scarab.o
 else
- OBJ_FILES += motors.o
+	ifeq ($(PRODUCT_MODEL),rx)
+		OBJ_FILES += motors_pwm.o
+	else
+		OBJ_FILES += motors.o
+	endif
 endif
 
 OBJECTS=$(addprefix $(OBJDIR)/,$(OBJ_FILES))
 HEADERS=radio.h nvconfig.h state.h motors.h diag.h a7105_spi.h mixing.h weapons.h vsense.h\
-	sticks.h
+	sticks.h motors_pwm.h
 
 MAKEFILES=Makefile.817 common.mk
 
@@ -62,6 +66,11 @@ unbind:
 	# Overwrite the magic number in eeprom so the receiver unbinds
 	# and restores its settings to factory state.
 	pymcuprog $(PYMCUPROG_OPTS) -m eeprom erase
+
+AVRDUDE_OPTS=-p $(MCU_PYMCUPROG) -c atmelice_updi
+
+flash: link
+	avrdude $(AVRDUDE_OPTS) -U flash:w:$(HEX)
 
 reset:
 	pymcuprog $(PYMCUPROG_OPTS) reset

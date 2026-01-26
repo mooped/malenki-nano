@@ -211,8 +211,10 @@ int main(void)
     init_serial();
     // Write the greeting message as soon as possible.
     diag_puts(
-#ifdef PRODUCT_IS_SCARAB
+#if PRODUCT_IS_SCARAB
     "\r\nScarab ESC+RX 2024"
+#elif PRODUCT_IS_RX
+    "\r\nReceiver"
 #else
     "\r\nMalenki-Nano 2023B"
     #ifdef PRODUCT_IS_PLUS
