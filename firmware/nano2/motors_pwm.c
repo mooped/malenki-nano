@@ -10,13 +10,13 @@
 #define F_CPU 10000000 /* 10MHz */
 #include <util/delay.h>
 
-#define NUM_CHANNELS 7  // 6 channels as outputs and one for the downtime
+#define NUM_CHANNELS 6  // 6 channels as outputs and one for the downtime
 
-#define INT_MASK (TCA_SINGLE_CMP0_bm)
+#define INT_MASK (TCA_SINGLE_CMP0_bm | TCA_SINGLE_OVF_bm)
 
 // Desired PWM values for each output
-volatile uint16_t pwm_values[NUM_CHANNELS] = { 0, 0, 0, 0, 0, 0, 20000 };
-volatile uint16_t pwm_values_buffered[NUM_CHANNELS] = { 0, 0, 0, 0, 0, 0, 20000 };
+volatile uint16_t pwm_values[NUM_CHANNELS] = { 0, 0, 0, 0, 0, 0 };
+volatile uint16_t pwm_values_buffered[NUM_CHANNELS] = { 0, 0, 0, 0, 0, 0 };
 
 // Track which channel is being output
 volatile uint16_t active_channel = 0;
@@ -31,8 +31,6 @@ volatile uint16_t active_channel = 0;
 //   PB1 - Ch 4
 //   PB2 - Ch 3
 
-static uint8_t dummy = 0; // Dummy register for downtime
-
 static volatile uint8_t* portclr_map[NUM_CHANNELS] =
 {
     &(PORTA.OUTCLR),
@@ -41,7 +39,6 @@ static volatile uint8_t* portclr_map[NUM_CHANNELS] =
     &(PORTB.OUTCLR),
     &(PORTB.OUTCLR),
     &(PORTA.OUTCLR),
-    &(dummy),
 };
 
 static volatile uint8_t* portset_map[NUM_CHANNELS] =
@@ -52,7 +49,6 @@ static volatile uint8_t* portset_map[NUM_CHANNELS] =
     &(PORTB.OUTSET),
     &(PORTB.OUTSET),
     &(PORTA.OUTSET),
-    &(dummy),
 };
 
 static volatile uint8_t portmask_map[NUM_CHANNELS] =
@@ -63,8 +59,8 @@ static volatile uint8_t portmask_map[NUM_CHANNELS] =
     (1 << 1),
     (1 << 0),
     (1 << 3),
-    0,
 };
+
 static bool pin_check(char portname, PORT_t *port, uint8_t pin)
 {
     uint8_t bm = 1<<pin;
@@ -126,7 +122,7 @@ void motors_init()
     // Timer A in 16 bit mode
     // Setting pins in motors_loop and clearing in CMP0 interrupt
     uint16_t period_val = 20000;
-    uint16_t cmp_val = 0;
+    uint16_t cmp_val = 20000;
     TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc;
     TCA0.SINGLE.INTCTRL = INT_MASK;
     TCA0.SINGLE.PERL = period_val & 0xff;
@@ -148,41 +144,10 @@ void enable_motor_brake(uint8_t motor_id)
 
 void motors_loop()
 {
-  // Once the interrupt is disabled, we can start the next pulse
-  if ((TCA0.SINGLE.INTCTRL & (INT_MASK)) != INT_MASK)
+  // Update channel data
+  for (int channel_index = 0; channel_index < NUM_CHANNELS; ++channel_index)
   {
-    // Increment the channel counter
-    if (++active_channel >= 6)//NUM_CHANNELS)
-    {
-      active_channel = 0;
-
-      // If we're about to output channel 0, reload the latest set of values
-      for (int channel_index = 0; channel_index < NUM_CHANNELS; ++channel_index)
-      {
-        pwm_values[channel_index] = pwm_values_buffered[channel_index];
-      }
-    }
-
-    // Skip if the channel is set to 0 (failsafe)
-    if (pwm_values[active_channel] == 0)
-    {
-      return;
-    }
-
-    cli();
-    // Update the timer for the next pulse
-    uint16_t cmp_val = pwm_values[active_channel] * 5;
-    TCA0.SINGLE.CMP0L = (cmp_val & 0xff);
-    TCA0.SINGLE.CMP0H = (cmp_val & 0xff00) >> 8;
-
-    // Reset the timer and set the selected pin high with minimum latency
-    TCA0.SINGLE.CNTL = 0;
-    *portset_map[active_channel] = portmask_map[active_channel];
-    TCA0.SINGLE.CNTH = 0;
-
-    // Re-enable timer interrupt
-    TCA0.SINGLE.INTCTRL = INT_MASK;
-    sei();
+    pwm_values[channel_index] = pwm_values_buffered[channel_index];
   }
 }
 
@@ -199,25 +164,38 @@ void set_pwm_outputs(uint16_t* sticks)
 {
   // Buffer the new values for each channel
   uint16_t sum = 0;
-  for (int channel_index = 0; channel_index < NUM_CHANNELS - 1; ++channel_index)
+  for (int channel_index = 0; channel_index < NUM_CHANNELS; ++channel_index)
   {
     sum += sticks[channel_index];
     pwm_values_buffered[channel_index] = sticks[channel_index];
   }
-
-  // Final channel is the downtime i.e. 20ms minus all others
-  pwm_values_buffered[NUM_CHANNELS - 1] = 20000 - sum;
 }
 
 ISR(TCA0_CMP0_vect)
 {
-  // Clear interrupt flag
-  TCA0.SINGLE.INTFLAGS = TCA_SINGLE_CMP0_bm;
-
   // Clear the current channel
   *portclr_map[active_channel] = portmask_map[active_channel];
 
-  // Clear interrupt flag to signal motors_loop that we're ready for the next channel
-  TCA0.SINGLE.INTCTRL = 0x00;
+  active_channel = (active_channel + 1) % NUM_CHANNELS;
+
+  // Update the timer for the next pulse
+  uint16_t cmp_val = pwm_values[active_channel] * 5;
+  TCA0.SINGLE.CMP0BUFL = (cmp_val & 0xff);
+  TCA0.SINGLE.CMP0BUFH = (cmp_val & 0xff00) >> 8;
+
+  // Clear interrupt flag
+  TCA0.SINGLE.INTFLAGS = TCA_SINGLE_CMP0_bm;
+}
+
+ISR(TCA0_OVF_vect)
+{
+  // Set the next pin, unless we're oututting no pulse for failsafe
+  if (pwm_values[active_channel] != 0)
+  {
+    *portset_map[active_channel] = portmask_map[active_channel];
+  }
+
+  // Clear interrupt flag
+  TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;
 }
 
