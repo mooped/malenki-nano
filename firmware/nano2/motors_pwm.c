@@ -121,8 +121,8 @@ void motors_init()
 
     // Timer A in 16 bit mode
     // Setting pins in motors_loop and clearing in CMP0 interrupt
-    uint16_t period_val = 20000;
-    uint16_t cmp_val = 20000;
+    uint16_t period_val = 16300;
+    uint16_t cmp_val = 10000;
     TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc;
     TCA0.SINGLE.INTCTRL = INT_MASK;
     TCA0.SINGLE.PERL = period_val & 0xff;
@@ -131,6 +131,9 @@ void motors_init()
     TCA0.SINGLE.CMP0H = (cmp_val & 0xff00) >> 8;
     TCA0.SINGLE.INTFLAGS = 0;
     TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV2_gc | TCA_SINGLE_ENABLE_bm;
+
+    // Set TCA0 CMP0 vector as the high priority interrupt
+    CPUINT.LVL1VEC = TCA0_CMP0_vect_num;
 }
 void set_motor_direction_duty(uint8_t motor_id, int16_t direction_and_duty)
 {
@@ -194,6 +197,10 @@ ISR(TCA0_OVF_vect)
   {
     *portset_map[active_channel] = portmask_map[active_channel];
   }
+
+  // Reset counter and adjust slightly
+  TCA0.SINGLE.CNTL = 50;
+  TCA0.SINGLE.CNTH = 0;
 
   // Clear interrupt flag
   TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;
