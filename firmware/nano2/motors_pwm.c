@@ -1,6 +1,7 @@
 #include "motors.h"
 #include "diag.h"
 #include "state.h"
+#include "weapons.h"
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -11,6 +12,9 @@
 #include <util/delay.h>
 
 #define NUM_CHANNELS 6  // 6 channels as outputs and one for the downtime
+
+#define OUTPUT_7_STICK 6
+#define OUTPUT_8_STICK 7
 
 #define INT_MASK (TCA_SINGLE_CMP0_bm | TCA_SINGLE_OVF_bm)
 
@@ -172,6 +176,9 @@ void set_pwm_outputs(uint16_t* sticks)
     sum += sticks[channel_index];
     pwm_values_buffered[channel_index] = sticks[channel_index];
   }
+
+  // Update weapon channels
+  weapons_set(sticks[OUTPUT_7_STICK], sticks[OUTPUT_8_STICK]);
 }
 
 ISR(TCA0_CMP0_vect)
